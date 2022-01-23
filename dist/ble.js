@@ -192,11 +192,9 @@ function createSession() {
     async function write(serviceId, characteristicId, msg, withResponse) {
         const release = await btMutex.acquire();
         try {
-            console.log("AAAAA");
             await getChar(serviceId, characteristicId).iface.WriteValue(msg, {
                 type: new dbus_next_1.Variant("s", withResponse ? "request" : "command"),
             });
-            console.log("BBBBB");
         }
         finally {
             release();
