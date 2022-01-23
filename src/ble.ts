@@ -312,11 +312,9 @@ function createSession() {
     const release = await btMutex.acquire();
 
     try {
-      console.log("AAAAA");
       await getChar(serviceId, characteristicId).iface.WriteValue(msg, {
         type: new Variant("s", withResponse ? "request" : "command"),
       });
-      console.log("BBBBB");
     } finally {
       release();
     }
