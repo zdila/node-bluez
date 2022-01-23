@@ -465,9 +465,7 @@ export async function initBle() {
   process.on("SIGINT", () => {
     debug("Caught interrupt signal");
 
-    shutDown().catch((err) => {
-      console.error(err);
-    });
+    process.exit();
   });
 
   async function shutDown() {

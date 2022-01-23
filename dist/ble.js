@@ -296,9 +296,7 @@ async function initBle() {
     });
     process.on("SIGINT", () => {
         (0, debug_1.debug)("Caught interrupt signal");
-        shutDown().catch((err) => {
-            console.error(err);
-        });
+        process.exit();
     });
     async function shutDown() {
         const promises = [];
