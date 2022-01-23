@@ -20,12 +20,12 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initBle = void 0;
+const async_mutex_1 = require("async-mutex");
 const dbus_next_1 = __importStar(require("dbus-next"));
 const debug_1 = require("./debug");
 const eventTarget_1 = require("./eventTarget");
 const filterMatcher_1 = require("./filterMatcher");
 const handlerErrorPropagator_1 = require("./handlerErrorPropagator");
-const lock_1 = require("./lock");
 const GS1 = "org.bluez.GattService1";
 const GC1 = "org.bluez.GattCharacteristic1";
 const D1 = "org.bluez.Device1";
@@ -35,7 +35,7 @@ let discovering = false;
 let adapterIface;
 let objectManagerIface;
 const deviceObjs = new Set();
-const btLock = (0, lock_1.createLock)();
+const btMutex = new async_mutex_1.Mutex();
 function createSession() {
     const { fire, on, off } = (0, eventTarget_1.createEventTarget)();
     let deviceObj;
@@ -190,14 +190,16 @@ function createSession() {
         throw new Error("no such characteristic");
     }
     async function write(serviceId, characteristicId, msg, withResponse) {
-        await btLock.lock();
+        const release = await btMutex.acquire();
         try {
+            console.log("AAAAA");
             await getChar(serviceId, characteristicId).iface.WriteValue(msg, {
                 type: new dbus_next_1.Variant("s", withResponse ? "request" : "command"),
             });
+            console.log("BBBBB");
         }
         finally {
-            btLock.unlock();
+            release();
         }
     }
     const notifMap = new Map();
@@ -208,12 +210,12 @@ function createSession() {
             return;
         }
         const { iface, obj } = getChar(serviceId, characteristicId);
-        await btLock.lock();
+        const release = await btMutex.acquire();
         try {
             await iface.StartNotify();
         }
         finally {
-            btLock.unlock();
+            release();
         }
         const propertiesIface = obj.getInterface(PROPS);
         const handleNotif = (0, handlerErrorPropagator_1.propagateHandlerError)((iface, changed) => {
@@ -236,7 +238,7 @@ function createSession() {
     }
     async function read(serviceId, characteristicId, startNotif = false) {
         const { iface } = getChar(serviceId, characteristicId);
-        await btLock.lock();
+        const release = await btMutex.acquire();
         try {
             const result = await iface.ReadValue({});
             if (startNotif) {
@@ -245,7 +247,7 @@ function createSession() {
             return result;
         }
         finally {
-            btLock.unlock();
+            release();
         }
     }
     return {

@@ -1,9 +1,9 @@
+import { Mutex } from "async-mutex";
 import dbus, { Variant } from "dbus-next";
 import { debug } from "./debug";
 import { createEventTarget } from "./eventTarget";
 import { Device, Filter, matchesFilter } from "./filterMatcher";
 import { propagateHandlerError } from "./handlerErrorPropagator";
-import { createLock } from "./lock";
 
 const GS1 = "org.bluez.GattService1";
 
@@ -23,7 +23,7 @@ let objectManagerIface: dbus.ClientInterface;
 
 const deviceObjs = new Set<dbus.ProxyObject>();
 
-const btLock = createLock();
+const btMutex = new Mutex();
 
 type CharacteristicChangeParams = {
   serviceId: string | null;
@@ -309,14 +309,16 @@ function createSession() {
     msg: Buffer,
     withResponse: boolean
   ) {
-    await btLock.lock();
+    const release = await btMutex.acquire();
 
     try {
+      console.log("AAAAA");
       await getChar(serviceId, characteristicId).iface.WriteValue(msg, {
         type: new Variant("s", withResponse ? "request" : "command"),
       });
+      console.log("BBBBB");
     } finally {
-      btLock.unlock();
+      release();
     }
   }
 
@@ -336,12 +338,12 @@ function createSession() {
 
     const { iface, obj } = getChar(serviceId, characteristicId);
 
-    await btLock.lock();
+    const release = await btMutex.acquire();
 
     try {
       await iface.StartNotify();
     } finally {
-      btLock.unlock();
+      release();
     }
 
     const propertiesIface = obj.getInterface(PROPS);
@@ -381,7 +383,7 @@ function createSession() {
   ) {
     const { iface } = getChar(serviceId, characteristicId);
 
-    await btLock.lock();
+    const release = await btMutex.acquire();
 
     try {
       const result = await iface.ReadValue({});
@@ -392,7 +394,7 @@ function createSession() {
 
       return result;
     } finally {
-      btLock.unlock();
+      release();
     }
   }
 
