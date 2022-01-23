@@ -6,8 +6,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "dbus-next": "^0.10.2",
-    "ts-node": "^10.4.0"
+    "dbus-next": "^0.10.2"
   },
   "devDependencies": {
     "@types/node": "^17.0.8",
